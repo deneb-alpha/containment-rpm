@@ -23,9 +23,9 @@ SAFE_BRANCH=${BRANCH//\//-}
 
 cat <<EOF > ${NAME}.spec
 #
-# spec file for package containment-rpm-docker
+# spec file for package containment-rpm
 #
-# Copyright (c) $YEAR SUSE LINUX GmbH, Nuernberg, Germany.
+# Copyright (c) $YEAR SUSE LLC and contributors
 #
 # All modifications and additions to the file contributed by third parties
 # remain the property of their copyright owners, unless otherwise agreed
@@ -36,31 +36,32 @@ cat <<EOF > ${NAME}.spec
 # license that conforms to the Open Source Definition (Version 1.9)
 # published by the Open Source Initiative.
 
-# Please submit bugfixes or comments via http://bugs.opensuse.org/
+# Please submit bugfixes or comments via https://bugs.opensuse.org/
 #
 
-# norootforbuild
 
 Name:           $NAME
 Version:        $VERSION
 Release:        0
+Summary:        Wraps OBS docker/kiwi-built images in rpms
 License:        MIT
-Summary:        Wraps OBS/kiwi-built images in rpms
-Url:            https://github.com/SUSE/containment-rpm-docker
 Group:          System/Management
+URL:            https://github.com/SUSE/containment-rpm
 Source:         ${SAFE_BRANCH}.tar.gz
 BuildRequires:  filesystem
-BuildRoot:      %{_tmppath}/%{name}-%{version}-build
-BuildArch:      noarch
-%if !0%{?is_opensuse}
-%if 0%{?suse_version} >= 1230
-Recommends:       rubygem(changelog_generator)
-%else
-Recommends:       rubygem-changelog_generator
-%endif
-Recommends:       changelog-generator-data
-%endif
+Requires:       jq
 Requires:       libxml2-tools
+BuildArch:      noarch
+# disabled for now, not used for public cloud purpose
+%if 0
+Requires:       changelog-generator-data
+Requires:       libxml2-tools
+%if 0%{?suse_version} >= 1230
+Requires:       rubygem(changelog_generator)
+%else
+Requires:       rubygem-changelog_generator
+%endif
+%endif
 # Conflicts with other packages that provide /usr/lib/build/kiwi_post_run
 Conflicts:      infos-creator-rpm
 
@@ -75,19 +76,19 @@ image.spec.in), and place the rpm in the correct location that it
 becomes an additional build artefact.
 
 %prep
-%setup -q -n %{name}-${SAFE_BRANCH}
+%setup -q
 
 %build
 
 %install
-mkdir -p %{buildroot}/usr/lib/build/
-install -m 644 image.spec.in %{buildroot}/usr/lib/build/
-install -m 755 kiwi_post_run %{buildroot}/usr/lib/build/
+mkdir -p %{buildroot}%{_prefix}/lib/build/post_build.d
+install -m 644 image.spec.in %{buildroot}%{_prefix}/lib/build/
+install -m 755 container_post_run %{buildroot}%{_prefix}/lib/build/post_build.d/
 
 %files
-%defattr(-,root,root)
-/usr/lib/build/kiwi_post_run
-/usr/lib/build/image.spec.in
+%dir %{_prefix}/lib/build/post_build.d
+%{_prefix}/lib/build/post_build.d/*_post_run
+%{_prefix}/lib/build/image.spec.in
 
 %changelog
 EOF

@@ -1,7 +1,7 @@
 #
 # spec file for package containment-rpm
 #
-# Copyright (c) 2023 SUSE LLC
+# Copyright (c) 2025 SUSE LLC and contributors
 #
 # All modifications and additions to the file contributed by third parties
 # remain the property of their copyright owners, unless otherwise agreed
@@ -15,14 +15,13 @@
 # Please submit bugfixes or comments via https://bugs.opensuse.org/
 #
 
-
 Name:           containment-rpm
-Version:        2.0.0
+Version:        2.0.3
 Release:        0
 Summary:        Wraps OBS docker/kiwi-built images in rpms
 License:        MIT
 Group:          System/Management
-URL:            https://github.com/SUSE/containment-rpm-docker
+URL:            https://github.com/SUSE/containment-rpm
 Source:         https://github.com/SUSE/containment-rpm/archive/refs/tags/v%{version}.tar.gz
 BuildRequires:  filesystem
 Requires:       jq
@@ -38,9 +37,11 @@ Requires:       rubygem(changelog_generator)
 Requires:       rubygem-changelog_generator
 %endif
 %endif
+# Conflicts with other packages that provide /usr/lib/build/kiwi_post_run
+Conflicts:      infos-creator-rpm
 
 %description
-OBS container_post_run hook to wrap a kiwi or docker image in an rpm package.
+OBS container_post_run hook to wrap a kiwi-produced image in an rpm package.
 
 This package should be required by the Build Service project's meta
 prjconf, so that the container_post_run hook is present in the container image

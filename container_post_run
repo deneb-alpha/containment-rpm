@@ -98,12 +98,29 @@ SUSE_VERSION="$(echo ${CONTAINER_TAG} | sed "s,.*:,,g")"
 SUSE_PRODUCT_NAME=$(echo ${CONTAINER_TAG} | sed "s,/.*,,g;s,/,-,g")
 
 NAME="${CONTAINER_NAME}-image"
-VERSION="${PKG_VERSION}"
-RELEASE="${PKG_RELEASE}"
+VERSION_FULL="${PKG_VERSION}"
+RELEASE_MACRO="${PKG_RELEASE}"
 
-if [ -z "$RELEASE" ]; then
-    echo "Could not parse release number, setting it to zero"
-    RELEASE=0
+if [[ "$VERSION_FULL" == *-* ]]; then
+    # This is a pre-release version
+    # The RPM 'Version' is the part before the hyphen
+    VERSION="${VERSION_FULL%%-*}"
+    # Get the pre-release identifier
+    PRERELEASE_PART="${VERSION_FULL#*-}"
+    # Sanitize the identifier for the RPM 'Release' field.
+    # This replaces any non-alphanumeric characters with a dot.
+    PRERELEASE_CLEAN=$(echo -n "$PRERELEASE_PART" | tr -c '[:alnum:]' '.')
+
+    # Construct the final 'Release' string for the .spec file.
+    RELEASE="0.${PRERELEASE_CLEAN}"
+    CLEANED_MACRO=${RELEASE_MACRO##+(.)}
+    if [ -n "$CLEANED_MACRO" ]; then
+      RELEASE="${RELEASE}.${CLEANED_MACRO}"
+    fi
+else
+    # This is a stable release
+    VERSION="$VERSION_FULL"
+    RELEASE="${RELEASE_MACRO}"
 fi
 
 # For some time our images where named <name>-docker-image,
@@ -114,11 +131,14 @@ OLD_NAME="${CONTAINER_NAME}-docker-image"
 
 # Check if VERSION was defined properly and validate it
 # VERSION for RPM package has to be decimal number separete with dots
-if ! [[ $VERSION =~ ^([0-9]+\.){0,2}(\*|[0-9]+)$ ]]; then
-    echo "Local build detected or wrong version format"
+# Make it possible to use Major.Minor.Patch.Revision notation
+if ! [[ $VERSION =~ ^[0-9]+(\.[0-9]+){0,3}$ ]]; then
     # Just arbitrarily assign the version since we have nothing else
     # to go on.
+    echo "Invalid version format in '$VERSION_FULL', falling back."
     VERSION="1.0.0"
+    # On fallback, use the basic release macro.
+    RELEASE="${RELEASE_MACRO}"
 fi
 
 echo "name $NAME"
